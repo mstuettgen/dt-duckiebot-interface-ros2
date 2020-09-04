@@ -8,8 +8,6 @@ package_name = 'led_emitter'
 setup(
     name=package_name,
     version='0.0.0',
-#    packages=[package_name,find_packages('include')],
-#    packages=[package_name,'rgb_led'],
     packages=['rgb_led'],
     package_dir={'': 'include'},
     data_files=[
@@ -28,6 +26,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+#            'led_emitter_node = led_emitter.led_emitter_node:main'
         ],
     },
 )
