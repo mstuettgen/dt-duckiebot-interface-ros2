@@ -1,4 +1,4 @@
-minimal_param_node:
+led_emitter_node:
   ros__parameters:
 
     robot_type: duckiebot

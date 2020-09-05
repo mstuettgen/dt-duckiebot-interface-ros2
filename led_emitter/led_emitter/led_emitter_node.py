@@ -6,7 +6,7 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
 
-from led_emitter.rgb_led import RGB_LED
+#from led_emitter.rgb_led import RGB_LED
 from std_msgs.msg import String
 from duckietown_msgs.srv import SetCustomLEDPattern, ChangePattern
 #from duckietown_msgs.srv import SetCustomLEDPattern_Response, ChangePattern_Response
@@ -105,29 +105,37 @@ class LEDEmitterNode(Node):
     def __init__(self):
         super().__init__('led_emitter_node', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
 
-        self.declare_parameters(
-            namespace='',
-            parameters=[
-                ('robot_type',None),
-                ('LED_protocol',None),
-                ('LED_Scale',None),
-                ('channel_order',None)
-                ])
+        # self.declare_parameters(
+        #     namespace='',
+        #     parameters=[
+        #         ('robot_type',None),
+        #         ('LED_protocol',None),
+        #         ('LED_Scale',None),
+        #         ('channel_order',None)
+        #         ])
 
         
         self.node_name = self.get_name()
         self.log = self.get_logger()
 
         self.log.info("Initializing LED....")        
-        self.led = RGB_LED()
+#        self.led = RGB_LED()
 
-#        self.robot_type = rospy.get_param("~robot_type")
-#        self.robot_type = "duckiebot"
-        self.robot_type = get_parameter("robot_type").get_parameter_value().string_value
+        self.robot_type = self.get_parameter("robot_type").get_parameter_value().string_value
         self.log.info("robot_type: " + self.robot_type)        
-
         
         # Add the node parameters to the parameters dictionary and load their default values
+        #self._LED_protocol = self.get_parameter("LED_protocol")
+        self._LED_scale = self.get_parameter('LED_scale').get_parameter_value().double_value
+        #self._channel_order = self.get_parameter("channel_order")
+
+        self.log.info("_LED_scale: " + str(self._LED_scale))        
+
+        test = self.get_parameter('LED_protocol.signals.GREEN.color_list').get_parameter_value().string_value
+
+        self.log.info("_Test: " + str(test))        
+
+        
 #        self._LED_protocol = rospy.get_param('~LED_protocol')
 #        self._LED_scale = rospy.get_param('~LED_scale')
 #        self._channel_order = rospy.get_param('~channel_order')
@@ -186,7 +194,7 @@ class LEDEmitterNode(Node):
         # # Turn on the LEDs
         # self.changePattern('WHITE')
 
-        self.log("Initialized.")
+        self.log.info("Initialized.")
 
     def srvSetCustomLEDPattern(self, req):
         """Service to set a custom pattern.
