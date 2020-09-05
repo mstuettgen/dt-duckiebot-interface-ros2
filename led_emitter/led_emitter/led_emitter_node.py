@@ -6,7 +6,7 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
 
-from rgb_led import RGB_LED
+from led_emitter.rgb_led import RGB_LED
 from std_msgs.msg import String
 from duckietown_msgs.srv import SetCustomLEDPattern, ChangePattern
 #from duckietown_msgs.srv import SetCustomLEDPattern_Response, ChangePattern_Response
@@ -103,7 +103,7 @@ class LEDEmitterNode(Node):
     """
 
     def __init__(self):
-        super().__init__("led_emitter_node")
+        super().__init__('led_emitter_node', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
 
         self.declare_parameters(
             namespace='',
@@ -117,13 +117,16 @@ class LEDEmitterNode(Node):
         
         self.node_name = self.get_name()
         self.log = self.get_logger()
-        self.log.info("Initializing....")
-        
+
+        self.log.info("Initializing LED....")        
         self.led = RGB_LED()
 
 #        self.robot_type = rospy.get_param("~robot_type")
-        self.robot_type = "duckiebot"
+#        self.robot_type = "duckiebot"
+        self.robot_type = get_parameter("robot_type").get_parameter_value().string_value
+        self.log.info("robot_type: " + self.robot_type)        
 
+        
         # Add the node parameters to the parameters dictionary and load their default values
 #        self._LED_protocol = rospy.get_param('~LED_protocol')
 #        self._LED_scale = rospy.get_param('~LED_scale')
@@ -135,53 +138,53 @@ class LEDEmitterNode(Node):
         self.current_pattern_name = 'LIGHT_OFF'
         self.changePattern(self.current_pattern_name)
 
-        # Initialize the timer
-        self.frequency = 1.0/self._LED_protocol['signals']['CAR_SIGNAL_A']['frequency']
-        self.is_on = False
-        self.cycle_timer = rospy.Timer(
-            rospy.Duration.from_sec(self.frequency/2.0),
-            self._cycle_timer
-        )
+        # # Initialize the timer
+        # self.frequency = 1.0/self._LED_protocol['signals']['CAR_SIGNAL_A']['frequency']
+        # self.is_on = False
+        # self.cycle_timer = rospy.Timer(
+        #     rospy.Duration.from_sec(self.frequency/2.0),
+        #     self._cycle_timer
+        # )
 
-        # Publishers
-        self.pub_state = rospy.Publisher(
-            "~current_led_state",
-            String,
-            queue_size=1,
-            dt_topic_type=TopicType.DRIVER
-        )
+        # # Publishers
+        # self.pub_state = rospy.Publisher(
+        #     "~current_led_state",
+        #     String,
+        #     queue_size=1,
+        #     dt_topic_type=TopicType.DRIVER
+        # )
 
-        # Services
-        self.srv_set_LED_ = rospy.Service(
-            "~set_custom_pattern",
-            SetCustomLEDPattern,
-            self.srvSetCustomLEDPattern
-        )
-        self.srv_set_pattern_ = rospy.Service(
-            "~set_pattern",
-            ChangePattern,
-            self.srvSetPattern
-        )
+        # # Services
+        # self.srv_set_LED_ = rospy.Service(
+        #     "~set_custom_pattern",
+        #     SetCustomLEDPattern,
+        #     self.srvSetCustomLEDPattern
+        # )
+        # self.srv_set_pattern_ = rospy.Service(
+        #     "~set_pattern",
+        #     ChangePattern,
+        #     self.srvSetPattern
+        # )
 
-        # Scale intensity of the LEDs
-        for name, c in self._LED_protocol['colors'].items():
-            for i in range(3):
-                c[i] = c[i] * self._LED_scale
+        # # Scale intensity of the LEDs
+        # for name, c in self._LED_protocol['colors'].items():
+        #     for i in range(3):
+        #         c[i] = c[i] * self._LED_scale
 
-        # Remap colors if robot does not have an RGB ordering
-        if self._channel_order[self.robot_type] != "RGB":
-            protocol = self._LED_protocol
-            for name, col in self._LED_protocol['colors'].items():
-                protocol['colors'][name] = self.remapColors(col)
+        # # Remap colors if robot does not have an RGB ordering
+        # if self._channel_order[self.robot_type] != "RGB":
+        #     protocol = self._LED_protocol
+        #     for name, col in self._LED_protocol['colors'].items():
+        #         protocol['colors'][name] = self.remapColors(col)
 
-            # update LED_protocol
-            self._LED_protocol = protocol
-            rospy.set_param("~LED_protocol", protocol)
+        #     # update LED_protocol
+        #     self._LED_protocol = protocol
+        #     rospy.set_param("~LED_protocol", protocol)
 
-            self.log("Colors remapped to " + str(self._channel_order[self.robot_type]))
+        #     self.log("Colors remapped to " + str(self._channel_order[self.robot_type]))
 
-        # Turn on the LEDs
-        self.changePattern('WHITE')
+        # # Turn on the LEDs
+        # self.changePattern('WHITE')
 
         self.log("Initialized.")
 

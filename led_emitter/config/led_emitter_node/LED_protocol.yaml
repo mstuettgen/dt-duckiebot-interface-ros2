@@ -1,109 +1,119 @@
-LED_protocol:
+minimal_param_node:
+  ros__parameters:
 
-  colors: # All triplets should be ordered [R,G,B]
-    switchedoff: [0,0,0]
-    white: [1,1,1]
-    green: [0,1,0]
-    red: [1,0,0]
-    blue: [0,0,1]
-    yellow: [1,0.8,0]
-    purple: [1,0,1]
-    cyan: [0,1,1]
-    pink: [1,0,0.5]
+    robot_type: duckiebot
 
-  frequencies:
-    f1: &f1 1.9
-    f2: &f2 4
-    f3: &f3 5.7
-    f4: &f4 7.8
-    f5: &f5 10.6
+    my_parameter: huuuuure
 
-  signals:
-    CAR_SIGNAL_PRIORITY:
-      color_mask: []
-      color_list: ["purple","red","purple","red","purple"]
-      frequency_mask: [1,0,1,0,1]
-      frequency: *f3
+    LED_scale: 0.8
 
-    CAR_SIGNAL_SACRIFICE_FOR_PRIORITY:
-      color_mask: []
-      color_list: ["white","red","white","red","white"]
-      frequency_mask: [1,0,1,0,1]
-      frequency: *f1
+    channel_order:
+      duckiebot: "RGB"
+      traffic_light: "GRB"
+      
+    LED_protocol:
+      colors: # All triplets should be ordered [R,G,B]
+        switchedoff: [0.0,0.0,0.0]
+        white: [1.0,1.0,1.0]
+        green: [0.0,1.0,0.0]
+        red: [1.0,0.0,0.0]
+        blue: [0.0,0.0,1.0]
+        yellow: [1.0,0.8,0.0]
+        purple: [1.0,0.0,1.0]
+        cyan: [0.0,1.0,1.0]
+        pink: [1.0,0.0,0.5]
 
-    CAR_SIGNAL_A:
-      color_mask: []
-      color_list: ["white","red","white","red","white"]
-      frequency_mask: [1,0,1,0,1]
-      frequency: *f2
+      frequencies:
+        f1: "&f1 1.9"
+        f2: "&f2 4"
+        f3: "&f3 5.7"
+        f4: "&f4 7.8"
+        f5: "&f5 10.6"
 
-    CAR_SIGNAL_GREEN:
-      color_mask: []
-      color_list: "green"
-      frequency_mask: [1,1,1,1,1]
-      frequency: *f3
+      signals:
+        CAR_SIGNAL_PRIORITY:
+          color_mask: []
+          color_list: ["purple","red","purple","red","purple"]
+          frequency_mask: [1,0,1,0,1]
+          frequency: "*f3"
 
-    CAR_DRIVING:
-      color_mask: []
-      color_list: ["white","red","white","red","white"]
-      frequency_mask: []
-      frequency:  0
+        CAR_SIGNAL_SACRIFICE_FOR_PRIORITY:
+          color_mask: []
+          color_list: ["white","red","white","red","white"]
+          frequency_mask: [1,0,1,0,1]
+          frequency: "*f1"
 
-    WHITE:
-      color_mask: []
-      color_list: "white"
-      frequency_mask: []
-      frequency:  0
+        CAR_SIGNAL_A:
+          color_mask: []
+          color_list: ["white","red","white","red","white"]
+          frequency_mask: [1,0,1,0,1]
+          frequency: "*f2"
 
-    RED:
-      color_mask: []
-      color_list: "red"
-      frequency_mask: []
-      frequency:  0
+        CAR_SIGNAL_GREEN:
+          color_mask: []
+          color_list: "green"
+          frequency_mask: [1,1,1,1,1]
+          frequency: "*f3"
 
-    GREEN:
-      color_mask: []
-      color_list: "green"
-      frequency_mask: []
-      frequency:  0
+        CAR_DRIVING:
+          color_mask: []
+          color_list: ["white","red","white","red","white"]
+          frequency_mask: []
+          frequency:  0
 
-    BLUE:
-      color_mask: []
-      color_list: "blue"
-      frequency_mask: []
-      frequency:  0
+        WHITE:
+          color_mask: []
+          color_list: "white"
+          frequency_mask: []
+          frequency:  0
 
-    LIGHT_OFF:
-      color_mask: []
-      color_list: "switchedoff"
-      frequency_mask: []
-      frequency:  0
+        RED:
+          color_mask: []
+          color_list: "red"
+          frequency_mask: []
+          frequency:  0
 
-    light_off:
-      color_mask: []
-      color_list: "switchedoff"
-      frequency_mask: []
-      frequency:  0
+        GREEN:
+          color_mask: []
+          color_list: "green"
+          frequency_mask: []
+          frequency:  0
 
-    OBSTACLE_ALERT:
-      color_mask: []
-      color_list: ["white","yellow","white","yellow","white"]
-      frequency_mask: [0,1,0,1,0]
-      frequency:  *f1
+        BLUE:
+          color_mask: []
+          color_list: "blue"
+          frequency_mask: []
+          frequency:  0
 
-    OBSTACLE_STOPPED:
-      color_mask: []
-      color_list: ["white","red","white","red","white"]
-      frequency_mask: [0,1,0,1,0]
-      frequency:  *f2
+        LIGHT_OFF:
+          color_mask: []
+          color_list: "switchedoff"
+          frequency_mask: []
+          frequency:  0
 
-    POPO:
-      color_mask: []
-      color_list: ["blue","red","switchedoff","blue","red"]
-      frequency_mask: [1,1,0,1,1]
-      frequency: *f2
+        light_off:
+          color_mask: []
+          color_list: "switchedoff"
+          frequency_mask: []
+          frequency:  0
 
-LED_scale: 0.8
-channel_order:
-  duckiebot: "RGB"
-  traffic_light: "GRB"
+        OBSTACLE_ALERT:
+          color_mask: []
+          color_list: ["white","yellow","white","yellow","white"]
+          frequency_mask: [0,1,0,1,0]
+          frequency:  "*f1"
+
+        OBSTACLE_STOPPED:
+          color_mask: []
+          color_list: ["white","red","white","red","white"]
+          frequency_mask: [0,1,0,1,0]
+          frequency:  "*f2"
+
+        POPO:
+          color_mask: []
+          color_list: ["blue","red","switchedoff","blue","red"]
+          frequency_mask: [1,1,0,1,1]
+          frequency: "*f2"
+
+
+
