@@ -122,24 +122,30 @@ class LEDEmitterNode(Node):
 #        self.led = RGB_LED()
 
         self.robot_type = self.get_parameter("robot_type").get_parameter_value().string_value
-        self.log.info("robot_type: " + self.robot_type)        
         
         # Add the node parameters to the parameters dictionary and load their default values
-        #self._LED_protocol = self.get_parameter("LED_protocol")
+        self._LED_protocol = self.get_parameter("LED_protocol")
+        self.log.info("Type of self._parameters: " + str(type(self._parameters)))
+
+        for key,values in self._parameters.items():
+            self.log.info("key: "+ str(key) + " | value: " + values.get_parameter_value().string_value)
+
+
         self._LED_scale = self.get_parameter('LED_scale').get_parameter_value().double_value
-        #self._channel_order = self.get_parameter("channel_order")
+        self._channel_order = self.get_parameter("channel_order")
 
-        self.log.info("_LED_scale: " + str(self._LED_scale))        
+        self.log.info("Testupdate LED_protocol....")   
+        #self._LED_protocol['signals']['WHITE']['color_list'] = "black"
+#        self._parameters['LED_protocol.signals.GREEN.color_list'] = ['black']
 
-        test = self.get_parameter('LED_protocol.signals.GREEN.color_list').get_parameter_value().string_value
 
-        self.log.info("_Test: " + str(test))        
+ #       self.log.info("Printing parameters....")
+ #       param_list = [parameter for parameter in self._parameters.values()]
+              
 
+ #       for x in param_list:
+ #           self.log.info("Name: " + str(x.name) + " value: " + str(x.get_parameter_value().string_value) + "\n")
         
-#        self._LED_protocol = rospy.get_param('~LED_protocol')
-#        self._LED_scale = rospy.get_param('~LED_scale')
-#        self._channel_order = rospy.get_param('~channel_order')
-
         # Initialize LEDs to be off
         self.pattern = [[0, 0, 0]] * 5
         self.frequency_mask = [0] * 5
@@ -163,21 +169,23 @@ class LEDEmitterNode(Node):
         # )
 
         # # Services
-        # self.srv_set_LED_ = rospy.Service(
-        #     "~set_custom_pattern",
-        #     SetCustomLEDPattern,
-        #     self.srvSetCustomLEDPattern
-        # )
-        # self.srv_set_pattern_ = rospy.Service(
-        #     "~set_pattern",
-        #     ChangePattern,
-        #     self.srvSetPattern
-        # )
+        self.srv_set_LED_ = self.create_service(
+            SetCustomLEDPattern,
+            'SetCustomLEDPattern',
+            self.srvSetCustomLEDPattern
+            )
+
+        self.srv_set_pattern_ = self.create_service(
+            ChangePattern,
+            'set_pattern',
+            self.srvSetPattern
+            )
 
         # # Scale intensity of the LEDs
-        # for name, c in self._LED_protocol['colors'].items():
-        #     for i in range(3):
-        #         c[i] = c[i] * self._LED_scale
+        #self.log.info("Scaling intensity of the LEDs...")
+        #for name, c in self._LED_protocol['colors'].items():
+        #    for i in range(3):
+        #        c[i] = c[i] * self._LED_scale
 
         # # Remap colors if robot does not have an RGB ordering
         # if self._channel_order[self.robot_type] != "RGB":
@@ -216,9 +224,9 @@ class LEDEmitterNode(Node):
         }
         # update LED_protocol
         self._LED_protocol = protocol
-        rospy.set_param("~LED_protocol", protocol)
+        self.set_param("LED_protocol", protocol)
 
-        self.log(
+        self.log.info(
             "Custom pattern updated: "
             "color_mask: %s, " % str(self._LED_protocol['signals']['custom']['color_mask']) +
             "color_list: %s, " % str(self._LED_protocol['signals']['custom']['color_list']) +
@@ -271,14 +279,15 @@ class LEDEmitterNode(Node):
                     self.led.setRGB(i, colors)
                 self.is_on = True
 
-    def srvSetPattern(self, msg):
+    def srvSetPattern(self, request, response):
         """Changes the current pattern according to the pattern name sent in the message.
 
 
             Args:
                 msg (String): requested pattern name
         """
-        self.changePattern(str(msg.pattern_name.data))
+        self.log.info("srvSetPattern - chaning pattern to " + request.pattern_name)
+        self.changePattern(str(request.pattern_name))
         return ChangePatternResponse()
 
     def changePattern(self, pattern_name):
@@ -299,13 +308,13 @@ class LEDEmitterNode(Node):
             # we might have updated its definition
             if self.current_pattern_name == pattern_name and pattern_name != 'custom':
                 return
-            elif pattern_name.strip("'").strip('"') in self._LED_protocol['signals']:
-                self.current_pattern_name = pattern_name
-            else:
-                self.log("Pattern name %s not found in the list of patterns. Change of "
-                         "pattern not executed." % pattern_name, type='err')
-                self.log(self._LED_protocol['signals'], type='err')
-                return
+            # elif pattern_name.strip("'").strip('"') in self._LED_protocol['signals']:
+            #     self.current_pattern_name = pattern_name
+            # else:
+            #     self.log("Pattern name %s not found in the list of patterns. Change of "
+            #              "pattern not executed." % pattern_name, type='err')
+            #     self.log(self._LED_protocol['signals'], type='err')
+            #     return
 
             # Extract the color from the protocol config file
             color_list = self._LED_protocol['signals'][pattern_name]['color_list']
