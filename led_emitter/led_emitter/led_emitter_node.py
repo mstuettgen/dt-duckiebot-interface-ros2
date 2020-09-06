@@ -6,7 +6,7 @@ from rclpy.node import Node
 from rclpy.duration import Duration
 from rclpy.time import Time
 
-#from led_emitter.rgb_led import RGB_LED
+from led_emitter.rgb_led import RGB_LED
 from std_msgs.msg import String
 from duckietown_msgs.srv import SetCustomLEDPattern, ChangePattern
 #from duckietown_msgs.srv import SetCustomLEDPattern_Response, ChangePattern_Response
@@ -113,17 +113,15 @@ class LEDEmitterNode(Node):
         #         ('LED_Scale',None),
         #         ('channel_order',None)
         #         ])
-
         
         self.node_name = self.get_name()
         self.log = self.get_logger()
 
         self.log.info("Initializing LED....")        
-#        self.led = RGB_LED()
-
-        self.robot_type = self.get_parameter("robot_type").get_parameter_value().string_value
-        
+        self.led = RGB_LED()
+       
         # Add the node parameters to the parameters dictionary and load their default values
+        self.robot_type = self.get_parameter("robot_type").get_parameter_value().string_value
         self._LED_protocol = self.get_parameter("LED_protocol")
         self.log.info("Type of self._parameters: " + str(type(self._parameters)))
 
@@ -134,31 +132,31 @@ class LEDEmitterNode(Node):
         self._LED_scale = self.get_parameter('LED_scale').get_parameter_value().double_value
         self._channel_order = self.get_parameter("channel_order")
 
-        self.log.info("Testupdate LED_protocol....")   
+#        self.log.info("Testupdate LED_protocol....")   
         #self._LED_protocol['signals']['WHITE']['color_list'] = "black"
 #        self._parameters['LED_protocol.signals.GREEN.color_list'] = ['black']
-
 
  #       self.log.info("Printing parameters....")
  #       param_list = [parameter for parameter in self._parameters.values()]
               
-
  #       for x in param_list:
  #           self.log.info("Name: " + str(x.name) + " value: " + str(x.get_parameter_value().string_value) + "\n")
         
         # Initialize LEDs to be off
-        self.pattern = [[0, 0, 0]] * 5
-        self.frequency_mask = [0] * 5
         self.current_pattern_name = 'LIGHT_OFF'
+        self.pattern = [[0.0, 0.0, 0.0]] * 5
+        self.frequency = 0
+        self.frequency_mask = [0] * 5
+        self.color_mask = []
+        self.color_list: ["switchedoff"]
+        self.switch = True
         self.changePattern(self.current_pattern_name)
-
-        # # Initialize the timer
+                
+        # Initialize the timer
         # self.frequency = 1.0/self._LED_protocol['signals']['CAR_SIGNAL_A']['frequency']
-        # self.is_on = False
-        # self.cycle_timer = rospy.Timer(
-        #     rospy.Duration.from_sec(self.frequency/2.0),
-        #     self._cycle_timer
-        # )
+        self.frequency = 1.0
+        self.is_on = False
+        self.cycle_timer = self.create_timer((self.frequency), self._update_LED_callback)
 
         # # Publishers
         # self.pub_state = rospy.Publisher(
@@ -181,11 +179,20 @@ class LEDEmitterNode(Node):
             self.srvSetPattern
             )
 
-        # # Scale intensity of the LEDs
-        #self.log.info("Scaling intensity of the LEDs...")
-        #for name, c in self._LED_protocol['colors'].items():
-        #    for i in range(3):
-        #        c[i] = c[i] * self._LED_scale
+#         # # Scale intensity of the LEDs
+#         self.log.info("Scaling intensity of the LEDs...")
+#         #for name, c in self._LED_protocol['colors'].items():
+#         for c in self.pattern:
+#             self.log.info(str(c))
+#             for i in range(3):
+#                 c[i] = c[i] * self._LED_scale
+
+#         for c in self.pattern:
+#             self.log.info(str(c)                
+#         #for i in range(3):
+#             #self.pattern[i] = self.pattern[i] * self._LED_scale
+#             #self.log.inf("self.patter[i]: " + str(self.pattern[i]))
+# #        self.log.info(str(self.pattern))
 
         # # Remap colors if robot does not have an RGB ordering
         # if self._channel_order[self.robot_type] != "RGB":
@@ -200,7 +207,7 @@ class LEDEmitterNode(Node):
         #     self.log("Colors remapped to " + str(self._channel_order[self.robot_type]))
 
         # # Turn on the LEDs
-        # self.changePattern('WHITE')
+        self.changePattern('WHITE')
 
         self.log.info("Initialized.")
 
@@ -239,7 +246,7 @@ class LEDEmitterNode(Node):
         # ---
         return SetCustomLEDPatternResponse()
 
-    def _cycle_timer(self, event):
+    def _update_LED_callback(self):
         """Timer.
 
             Calls updateLEDs according to the frequency of the current pattern.
@@ -256,16 +263,20 @@ class LEDEmitterNode(Node):
             the color specified in self.color_list. If a nonzero frequency is set,
             toggles on/off the LEDs specified on self.frequency_mask.
         """
+#        self.log.info("UpdateLEDs()")
+        
         # Do nothing if inactive
         if not self.switch:
             return
 
         elif not self.frequency:
+#            self.log.info("no osciallation")
             # No oscillation
             for i in range(5):
                 colors = self.pattern[i]
                 self.led.setRGB(i, colors)
         else:
+#            self.log.info("oscillate")
             # Oscillate
             if self.is_on:
                 for i in range(5):
@@ -286,9 +297,10 @@ class LEDEmitterNode(Node):
             Args:
                 msg (String): requested pattern name
         """
-        self.log.info("srvSetPattern - chaning pattern to " + request.pattern_name)
+        self.log.info("srvSetPattern - Requesting LED pattern change to " + request.pattern_name)
         self.changePattern(str(request.pattern_name))
-        return ChangePatternResponse()
+
+        return response
 
     def changePattern(self, pattern_name):
         """Change the current LED pattern.
@@ -316,24 +328,182 @@ class LEDEmitterNode(Node):
             #     self.log(self._LED_protocol['signals'], type='err')
             #     return
 
-            # Extract the color from the protocol config file
-            color_list = self._LED_protocol['signals'][pattern_name]['color_list']
-
-            if type(color_list) is str:
-                self.pattern = [self._LED_protocol['colors'][color_list]]*5
             else:
-                if len(color_list) != 5:
-                    self.log("The color list should be a string or a list of length 5. Change of "
-                             "pattern not executed.", type='err')
-                    return
+              if pattern_name=="WHITE":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[1.0, 1.0, 1.0]] * 5
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list: ["white"]
+ 
+              elif pattern_name=="RED":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[1.0, 0.0, 0.0]] * 5
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list= ["red"]
+ 
+              elif pattern_name=="GREEN":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[0.0, 1.0, 0.0]] * 5
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list= ["green"]
+ 
+              elif pattern_name=="BLUE":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[0.0, 0.0, 1.0]] * 5
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list = ["blue"]
+                  
+              elif pattern_name=="LIGHT_OFF":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[0.0, 0.0, 0.0]] * 5
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list = ["switchedoff"]
 
-                self.pattern = [[0, 0, 0]]*5
-                for i in range(len(color_list)):
-                    self.pattern[i] = self._LED_protocol['colors'][color_list[i]]
+              elif pattern_name=="CAR_DRIVING":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 0
+                  self.frequency_mask = []
+                  self.color_mask = []
+                  self.color_list = ["white","red","white","red","white"]
 
-            # Extract the frequency from the protocol
-            self.frequency_mask = self._LED_protocol['signals'][pattern_name]['frequency_mask']
-            self.frequency = self._LED_protocol['signals'][pattern_name]['frequency']
+              elif pattern_name=="CAR_DRIVING":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 0
+                  self.frequency_mask = 0
+                  self.color_mask = []
+                  self.color_list = ["white","red","white","red","white"]
+
+              elif pattern_name=="CAR_SIGNAL_PRIORITY":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 0.0, 1.0], #purpe
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 0.0, 1.0], #purple
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 0.0, 1.0] #purple
+                      ]
+                  self.frequency = 5.7
+                  self.frequency_mask = [1,0,1,0,1]
+
+              elif pattern_name=="CAR_SIGNAL_SACRIFICE_FOR_PRIORITY":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 1.9
+                  self.frequency_mask = [1,0,1,0,1]
+
+              elif pattern_name=="CAR_SIGNAL_A":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 5.7
+                  self.frequency_mask = [1,0,1,0,1]
+
+              elif pattern_name=="CAR_SIGNAL_GREEN":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [[0.0, 1.0, 0.0]] * 5
+                  self.frequency = 4
+                  self.frequency_mask = [1,1,1,1,1]
+
+              elif pattern_name=="OBSTACLE_ALERT":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.8, 0.0], #yellow
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.8, 0.0], #yellow
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 1.9
+                  self.frequency_mask = [0,1,0,1,0]
+
+              elif pattern_name=="OBSTACLE_STOPPED":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 4
+                  self.frequency_mask = [0,1,0,1,0]
+
+              elif pattern_name=="POPO":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [0.0, 0.0, 1.0], #blue
+                      [1.0, 0.0, 0.0], #red
+                      [0.0, 0.0, 0.0], #off
+                      [0.0, 0.0, 1.0], #blue
+                      [1.0, 0.0, 0.0] #red
+                      ]
+                  self.frequency = 4
+                  self.frequency_mask = [0,1,0,1,0]
+                  
+              elif pattern_name=="INDICATOR_RIGHT":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 1.0, 1.0], #white
+                      [1.0, 0.0, 0.0], #red
+                      [0.0, 0.0, 0.0], #off
+                      [1.0, 0.5, 0.0], #orange
+                      [1.0, 0.5, 0.0] #orange
+                      ]
+                  self.frequency = 1.0
+                  self.frequency_mask = [0,0,0,1,1]
+
+              elif pattern_name=="INDICATOR_LEFT":
+                  self.current_pattern_name = pattern_name
+                  self.pattern = [
+                      [1.0, 0.8, 0.0], #yellow
+                      [1.0, 0.8, 0.0], #yellow
+                      [0.0, 0.0, 0.0], #off
+                      [1.0, 0.0, 0.0], #red
+                      [1.0, 1.0, 1.0] #white
+                      ]
+                  self.frequency = 1.0
+                  self.frequency_mask = [1,1,0,0,0]
+                  
+                  
+              else:
+                  self.log.info("Unknown pattern : " + pattern_name + " | Aborting")
+                  return
+                  
 
             # If static behavior, updated LEDs
             if self.frequency == 0:
@@ -342,11 +512,31 @@ class LEDEmitterNode(Node):
             # Anyway modify the frequency (to stop timer if static)
             self.changeFrequency()
 
-            # Loginfo
-            self.log('Pattern changed to (%r), cycle: %s ' % (pattern_name, self.frequency))
+            # # Loginfo
+            self.log.info('Pattern changed to (%r), cycle: %s ' % (pattern_name, self.frequency))
+                
+            # Extract the color from the protocol config file
+            # color_list = self._LED_protocol['signals'][pattern_name]['color_list']
 
-            # Publish current pattern
-            self.pub_state.publish(self.current_pattern_name)
+            # if type(color_list) is str:
+            #     self.pattern = [self._LED_protocol['colors'][color_list]]*5
+            # else:
+            #     if len(color_list) != 5:
+            #         self.log("The color list should be a string or a list of length 5. Change of "
+            #                  "pattern not executed.", type='err')
+            #         return
+
+            #     self.pattern = [[0, 0, 0]]*5
+            #     for i in range(len(color_list)):
+            #         self.pattern[i] = self._LED_protocol['colors'][color_list[i]]
+
+            # # Extract the frequency from the protocol
+            # self.frequency_mask = self._LED_protocol['signals'][pattern_name]['frequency_mask']
+            # self.frequency = self._LED_protocol['signals'][pattern_name]['frequency']
+
+
+            # # Publish current pattern
+            # self.pub_state.publish(self.current_pattern_name)
 
     def changeFrequency(self):
         """Changes current frequency of LEDs
@@ -356,14 +546,16 @@ class LEDEmitterNode(Node):
             stops the callback timer.
         """
         if self.frequency == 0:
-            self.cycle_timer.shutdown()
+            self.cycle_timer.cancel()
 
         else:
             try:
-                self.cycle_timer.shutdown()
+                self.cycle_timer.cancel()
                 # below, convert to hz
                 d = 1.0/(2.0*self.frequency)
-                self.cycle_timer = rospy.Timer(rospy.Duration.from_sec(d), self._cycle_timer)
+                #elf.cycle_timer = rospy.Timer(rospy.Duration.from_sec(d), self._cycle_timer)
+                self.cycle_timer = self.create_timer(d, self._update_LED_callback)
+
 
             except ValueError as e:
                 self.frequency = None
