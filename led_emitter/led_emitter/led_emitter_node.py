@@ -13,7 +13,7 @@ from duckietown_msgs.srv import SetCustomLEDPattern, ChangePattern
 
 #from duckietown.dtros import DTROS, TopicType, NodeType
 
-
+#class LEDEmitterNode(DTROS):
 class LEDEmitterNode(Node):
     """Node for controlling LEDs.
 
