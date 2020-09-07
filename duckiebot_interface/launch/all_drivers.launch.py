@@ -2,10 +2,25 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import launch_ros
 
 def generate_launch_description():
 
     ld = LaunchDescription()
+
+     
+    # Load the URDF into a parameter
+    urdf_dir = get_package_share_directory('duckiebot_interface')
+    urdf_path = os.path.join(urdf_dir, 'urdf', 'duckiebot.urdf')
+    urdf = open(urdf_path).read()
+    
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        node_name='robot_state_publisher',
+        node_executable='robot_state_publisher',
+        output='screen',
+        parameters=[{'robot_description': urdf}]
+    )   
 
     #start wheels driver node
     wheels_driver_node=Node(
@@ -13,7 +28,7 @@ def generate_launch_description():
         node_name = 'wheels_driver_node',
         node_executable = 'wheels_driver_node',
         output='screen'
-        )
+    )
     
     #start LED emitter node
     led_emitter_node_config = os.path.join(
@@ -38,6 +53,7 @@ def generate_launch_description():
         output = 'screen'
     )
     
+#    ld.add_action(robot_state_publisher_node)
     ld.add_action(wheels_driver_node)
     ld.add_action(led_emitter_node)
     ld.add_action(camera_node)
