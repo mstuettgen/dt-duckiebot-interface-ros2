@@ -7,12 +7,13 @@ import copy
 import numpy as np
 from threading import Thread
 import _thread as thread
+from time import sleep
 
 import sys
 import rclpy
 from rclpy.node import Node
 
-#from picamera import PiCamera
+from picamera import PiCamera
 from sensor_msgs.msg import CompressedImage, CameraInfo
 #from sensor_msgs.srv import SetCameraInfo, SetCameraInfoResponse
 from sensor_msgs.srv import SetCameraInfo
@@ -73,41 +74,48 @@ class CameraNode(Node):
 
         self.node_name = self.get_name()
         self.log = self.get_logger()
- 
+        self._declare_parameters()
+
         # Add the node parameters to the parameters dictionary and load their default values
         # self._framerate = rospy.get_param(
         #     '~framerate',
         #     dt_help="Framerate at which images frames are produced"
         # )
-        self._framerate = self.get_parameter("framerate")
+        self._framerate = self.get_parameter("framerate").get_parameter_value().integer_value
+        self.log.info("framerate: " + str(self._framerate))
 
         # self._res_w = rospy.get_param(
         #     '~res_w',
         #     dt_help="Horizontal resolution (width) of the produced image frames."
         # )
-        self._res_w = self.get_parameter("res_w")
+        self._res_w = self.get_parameter("res_w").get_parameter_value().integer_value
+        self.log.info("res_w: " + str(self._res_w))
 
         # self._res_h = rospy.get_param(
         #     '~res_h',
         #     dt_help="Vertical resolution (height) of the produced image frames."
         # )
-        self._res_h = self.get_parameter("res_h")
+        self._res_h = self.get_parameter("res_h").get_parameter_value().integer_value
+        self.log.info("res_h: " + str(self._res_h))
 
         # self._exposure_mode = rospy.get_param(
         #     '~exposure_mode',
         #     dt_help="Exposure mode of the camera. Supported values are listed on "
-        #             "https://picamera.readthedocs.io/en/release-1.13/"
-        #             "api_camera.html#picamera.PiCamera.exposure_mode"
+        #             "https://picamera.readthedocs.io/en/release-1.13/api_camera.html#picamera.PiCamera.exposure_mode"
         # )
-        self._exposure_mode = self.get_parameter("exposure_mode")
+        self._exposure_mode = self.get_parameter("exposure_mode").get_parameter_value().string_value
+        self.log.info("exposure_mode: " + str(self._exposure_mode))
 
         
         # Setup PiCamera
         self.image_msg = CompressedImage()
-#        self.camera = PiCamera()
-#        self.camera.framerate = self._framerate
-#        self.camera.resolution = (self._res_w, self._res_h)
-#        self.camera.exposure_mode = self._exposure_mode
+        self.camera = PiCamera()
+        self.camera.resolution = (self._res_w,self._res_h)
+        self.camera.framerate = self._framerate
+        self.camera.exposure_mode = self._exposure_mode
+
+        self.log.info("Camera warmup...")
+        sleep(2)
 
         # For intrinsic calibration
         self.cali_file_folder = '/data/config/calibrations/camera_intrinsic/'
@@ -176,6 +184,14 @@ class CameraNode(Node):
         self.is_shutdown = False
         self.log.info("Initialized.")
 
+         
+    def _declare_parameters(self):
+        self.declare_parameter('res_w', 640) #tested on Pi4
+        self.declare_parameter('res_h', 480) #tested on Pi4
+        self.declare_parameter('framerate', 10) #tested on Pi4
+        self.declare_parameter('exposure_mode','sports')
+
+        
     def start_capturing(self):
         """Initialize and closes image stream.
 
@@ -192,7 +208,8 @@ class CameraNode(Node):
                     gen,
                     'jpeg',
                     use_video_port=True,
-                    splitter_port=0
+                    splitter_port=0,
+                    burst=False,
                 )
             except StopIteration:
                 pass
@@ -216,7 +233,7 @@ class CameraNode(Node):
             yield stream
             # Construct image_msg
             # Grab image from stream
-            stamp = rospy.Time.now()
+            stamp = self.get_clock().now().to_msg()
             stream.seek(0)
             stream_data = stream.getvalue()
 
@@ -228,19 +245,19 @@ class CameraNode(Node):
             image_msg.header.frame_id = self.frame_id
             self.pub_img.publish(image_msg)
 
-            # Publish the CameraInfo message
-            self.current_camera_info.header.stamp = stamp
-            self.pub_camera_info.publish(self.current_camera_info)
+#            # Publish the CameraInfo message
+#            self.current_camera_info.header.stamp = stamp
+#            self.pub_camera_info.publish(self.current_camera_info)
 
             # Clear stream
             stream.seek(0)
             stream.truncate()
 
             if not self.has_published:
-                self.log("Published the first image.")
+                self.log.info("Published the first image.")
                 self.has_published = True
 
-            time.sleep(0.001)
+#            sleep(0.001)
 #            rospy.sleep(rospy.Duration.from_sec(0.001))
 
     def srv_set_camera_info_cb(self, req):
@@ -370,6 +387,7 @@ def main(args = None):
     thread.start_new_thread(node.start_capturing, ())
 
     try:
+#        node.start_capturing()
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
