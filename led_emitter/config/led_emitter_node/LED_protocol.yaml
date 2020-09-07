@@ -3,8 +3,6 @@ led_emitter_node:
 
     robot_type: duckiebot
 
-    my_parameter: huuuuure
-
     LED_scale: 0.8
 
     channel_order:
