@@ -207,7 +207,7 @@ class LEDEmitterNode(Node):
         #     self.log("Colors remapped to " + str(self._channel_order[self.robot_type]))
 
         # # Turn on the LEDs
-        self.changePattern('WHITE')
+        self.changePattern('LIGHT_OFF')
 
         self.log.info("Initialized.")
 
