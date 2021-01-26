@@ -118,14 +118,14 @@ class CameraNode(Node):
         sleep(2)
 
         # For intrinsic calibration
-        self.cali_file_folder = '/data/config/calibrations/camera_intrinsic/'
+        #self.cali_file_folder = '/data/config/calibrations/camera_intrinsic/'
         self.frame_id = self.get_namespace().strip('/') + '/camera_optical_frame'
-        self.cali_file = self.cali_file_folder + self.get_namespace().strip("/") + ".yaml"
+        #self.cali_file = self.cali_file_folder + self.get_namespace().strip("/") + ".yaml"
 
         # Locate calibration yaml file or use the default otherwise
-        if not os.path.isfile(self.cali_file):
-            self.log.warn("Calibration not found: %s.\n Using default instead." % self.cali_file)
-            self.cali_file = (self.cali_file_folder + "default.yaml")
+#        if not os.path.isfile(self.cali_file):
+#            self.log.warn("Calibration not found: %s.\n Using default instead." % self.cali_file)
+#            self.cali_file = (self.cali_file_folder + "default.yaml")
 
         # # Shutdown if no calibration file not found
         # if not os.path.isfile(self.cali_file):
@@ -133,6 +133,19 @@ class CameraNode(Node):
         #     rclpy.shutdown()
 
         # # Load the calibration file
+        self.current_camera_info=CameraInfo()
+        self.current_camera_info.height = self._res_h
+        self.current_camera_info.width = self._res_w
+        self.current_camera_info.distortion_model = "plumb_bob"
+        self.current_camera_info.header.frame_id = "camera_optical_frame"
+        self.current_camera_info.d = [-0.2944667743901807, 0.0701431287084318, 0.0005859930422629722, -0.0006697840226199427, 0.0]
+        self.current_camera_info.r = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        self.current_camera_info.p = [220.2460277141687, 0.0, 301.8668918355899, 0.0, 0.0, 238.6758484095299, 227.0880056118307, 0.0, 0.0, 0.0, 1.0, 0.0]
+        self.current_camera_info.k = [305.5718893575089, 0.0, 303.0797142544728, 0.0, 308.8338858195428, 231.8845403702499, 0.0, 0.0, 1.0]
+        
+
+
+        
         # self.original_camera_info = self.load_camera_info(self.cali_file)
         # self.original_camera_info.header.frame_id = self.frame_id
         # self.current_camera_info = copy.deepcopy(self.original_camera_info)
@@ -229,6 +242,9 @@ class CameraNode(Node):
             Args:
                 stream (:obj:`BytesIO`): imagery stream
         """
+        self.log.info("grab_and_publish()")
+
+
         while not self.is_shutdown:
             yield stream
             # Construct image_msg
@@ -246,8 +262,8 @@ class CameraNode(Node):
             self.pub_img.publish(image_msg)
 
 #            # Publish the CameraInfo message
-#            self.current_camera_info.header.stamp = stamp
-#            self.pub_camera_info.publish(self.current_camera_info)
+            self.current_camera_info.header.stamp = stamp
+            self.pub_camera_info.publish(self.current_camera_info)
 
             # Clear stream
             stream.seek(0)
@@ -257,7 +273,7 @@ class CameraNode(Node):
                 self.log.info("Published the first image.")
                 self.has_published = True
 
-#            sleep(0.001)
+            sleep(0.001)
 #            rospy.sleep(rospy.Duration.from_sec(0.001))
 
     def srv_set_camera_info_cb(self, req):
